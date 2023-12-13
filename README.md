@@ -4,20 +4,32 @@
 publishes it on ROS2 topics
 
 
+## Prerequisits
+
+Find the IP address running Vicon Tracker software via `ipconfig` in the
+command-prompt in windows. 
+
+<p align="center">
+<img src="./ipconfig.png" alt="ipconfig example" width="800"/>
+</p>
+
 ## Usage
 
-1. Find the IP address running Vicon Tracker software via `ipconfig` in the
-   command-prompt in windows.
-
-2. Clone `ros2_vicon`, download VICON DataStream SDK and run
+Clone `ros2_vicon`, download VICON DataStream SDK and run:
 
 ```
+# Clone
 cd <colcon workspace>/src
 git clone https://github.com/chutsu/ros2_vicon
+
+# Download VICON DataStream SDK locally
 cd ros2_vicon && make deps
 
+# Build ros2_vicon
 cd <colcon workspace>/src
 colcon build
+
+# Run
 source install/setup.bash
 ros2 run ros2_vicon --ros-args -p hostname:=<ip address of vicon tracker>
 ```
