@@ -15,8 +15,6 @@ command-prompt in windows.
 
 ## Usage
 
-Clone `ros2_vicon`, download VICON DataStream SDK and run:
-
 ```
 # Clone
 cd <colcon workspace>/src
