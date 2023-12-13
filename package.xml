@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ros2_vicon</name>
+  <version>0.0.0</version>
+  <description>ROS2 VICON</description>
+
+  <maintainer email="chutsu@gmail.com">Chris Choi</maintainer>
+  <author email="chutsu@gmail.com">Chris Choi</author>
+
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <build_depend>ros_environment</build_depend>
+
+  <depend>builtin_interfaces</depend>
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
