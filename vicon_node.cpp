@@ -1,12 +1,13 @@
 #include <map>
-#include <mutex>
 #include <string>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "DataStreamClient.h"
+
 namespace vicon = ViconDataStreamSDK::CPP;
+using PoseStamped = geometry_msgs::msg::PoseStamped;
 
 struct ViconNode : public rclcpp::Node {
   vicon::Client client;
@@ -14,9 +15,7 @@ struct ViconNode : public rclcpp::Node {
   std::string hostname;
   size_t buffer_size;
   std::string ns_name;
-  std::map<std::string, rclcpp::Publisher<geometry_msgs::msg::PoseStamped>>
-      pub_map;
-  std::mutex mutex;
+  std::map<std::string, rclcpp::Publisher<PoseStamped>::SharedPtr> pub_map;
 
   ViconNode() : Node{"vicon_node"} {
     declare_parameter<std::string>("hostname", "127.0.0.1");
@@ -74,15 +73,15 @@ struct ViconNode : public rclcpp::Node {
     client.DisableDeviceData();
     client.DisableCentroidData();
 
-    std::cout << "Disconnecting from " + hostname + " ..." << std::endl;
+    printf("Disconnecting from [%s] ...\n", hostname.c_str());
     client.Disconnect();
 
     if (!client.IsConnected().Connected) {
-      std::cout << "Successfully disconnected!" << std::endl;
+      printf("Successfully disconnected!\n");
       return true;
     }
 
-    std::cout << "Failed to disconnect!" << std::endl;
+    printf("Failed to disconnect!\n");
     return false;
   }
 
@@ -95,52 +94,54 @@ struct ViconNode : public rclcpp::Node {
       const auto seg_count = client.GetSegmentCount(sub_name).SegmentCount;
 
       for (size_t seg_index = 0; seg_index < seg_count; ++seg_index) {
-        // clang-format off
-        const std::string seg_name = client.GetSegmentName(sub_name, seg_index).SegmentName;
-        const std::string topic_name = sub_name + "/" + seg_name;
-        // clang-format on
-
-        // if (pub_map.count(topic_name) && pub_map[topic_name].is_ready) {
-        if (pub_map.count(topic_name)) {
-          // clang-format off
-          const auto trans = client.GetSegmentGlobalTranslation(sub_name, seg_name);
-          const auto rot = client.GetSegmentGlobalRotationQuaternion(sub_name, seg_name);
-          // clang-format on
-
-          geometry_msgs::msg::PoseStamped msg;
-          msg.header.frame_id = sub_name + "/" + seg_name;
-          msg.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
-          msg.pose.position.x = trans.Translation[0];
-          msg.pose.position.y = trans.Translation[1];
-          msg.pose.position.z = trans.Translation[2];
-          msg.pose.orientation.x = rot.Rotation[0];
-          msg.pose.orientation.y = rot.Rotation[1];
-          msg.pose.orientation.z = rot.Rotation[2];
-          msg.pose.orientation.w = rot.Rotation[3];
-
-          // pub_map[topic_name].publish(pose);
-        } else if (pub_map.count(topic_name) == 0) {
-          const std::string topic_name =
-              ns_name + "/" + sub_name + "/" + seg_name;
-          const std::string key = sub_name + "/" + seg_name;
-          printf("Creating publisher for segment [%s] from subject [%s]\n",
-                 seg_name.c_str(), sub_name.c_str());
-          // pub_map.emplace(key, Publisher(topic_name, this));
-        }
+        const std::string seg_name =
+            client.GetSegmentName(sub_name, seg_index).SegmentName;
+        publish(sub_name, seg_name);
       }
+    }
+  }
+
+  void publish(const std::string &sub_name, const std::string &seg_name) {
+    const std::string topic_name = sub_name + "/" + seg_name;
+    if (pub_map.count(topic_name)) {
+      // clang-format off
+      const auto trans = client.GetSegmentGlobalTranslation(sub_name, seg_name);
+      const auto rot = client.GetSegmentGlobalRotationQuaternion(sub_name, seg_name);
+      // clang-format on
+
+      PoseStamped msg;
+      msg.header.frame_id = sub_name + "/" + seg_name;
+      msg.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+      msg.pose.position.x = trans.Translation[0];
+      msg.pose.position.y = trans.Translation[1];
+      msg.pose.position.z = trans.Translation[2];
+      msg.pose.orientation.x = rot.Rotation[0];
+      msg.pose.orientation.y = rot.Rotation[1];
+      msg.pose.orientation.z = rot.Rotation[2];
+      msg.pose.orientation.w = rot.Rotation[3];
+      pub_map[topic_name]->publish(msg);
+
+    } else if (pub_map.count(topic_name) == 0) {
+      const std::string topic_name = ns_name + "/" + sub_name + "/" + seg_name;
+      const std::string key = sub_name + "/" + seg_name;
+      printf("Creating publisher [%s]\n", key.c_str());
+      pub_map[key] = create_publisher<PoseStamped>(topic_name, 1);
     }
   }
 };
 
 int main(int argc, char **argv) {
+  // Initialize ROS Node
   rclcpp::init(argc, argv);
+
+  // Connect and loop Vicon Node
   ViconNode node;
   node.connect();
-
   while (rclcpp::ok()) {
-    node->get_frame();
+    node.get_frame();
   }
 
+  // Disconnect
   node.disconnect();
   rclcpp::shutdown();
 
