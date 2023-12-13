@@ -26,7 +26,7 @@ git clone https://github.com/chutsu/ros2_vicon
 cd ros2_vicon && make deps
 
 # Build ros2_vicon
-cd <colcon workspace>/src
+cd <colcon workspace>
 colcon build
 
 # Run
