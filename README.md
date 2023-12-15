@@ -4,7 +4,7 @@
 publishes it on ROS2 topics
 
 
-## Prerequisits
+## Prerequisites
 
 Find the IP address of the computer running Vicon Tracker software via `ipconfig` in the
 command-prompt in windows. 
