@@ -4,9 +4,9 @@
 publishes it on ROS2 topics
 
 
-## Prerequisits
+## Prerequisites
 
-Find the IP address running Vicon Tracker software via `ipconfig` in the
+Find the IP address of the computer running Vicon Tracker software via `ipconfig` in the
 command-prompt in windows. 
 
 <p align="center">
@@ -14,8 +14,6 @@ command-prompt in windows.
 </p>
 
 ## Usage
-
-Clone `ros2_vicon`, download VICON DataStream SDK and run:
 
 ```
 # Clone
@@ -26,7 +24,7 @@ git clone https://github.com/chutsu/ros2_vicon
 cd ros2_vicon && make deps
 
 # Build ros2_vicon
-cd <colcon workspace>/src
+cd <colcon workspace>
 colcon build
 
 # Run
