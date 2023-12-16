@@ -112,9 +112,9 @@ struct ViconNode : public rclcpp::Node {
       PoseStamped msg;
       msg.header.frame_id = sub_name + "/" + seg_name;
       msg.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
-      msg.pose.position.x = trans.Translation[0];
-      msg.pose.position.y = trans.Translation[1];
-      msg.pose.position.z = trans.Translation[2];
+      msg.pose.position.x = trans.Translation[0] * 1e-3; // Convert mm to m
+      msg.pose.position.y = trans.Translation[1] * 1e-3; // Convert mm to m
+      msg.pose.position.z = trans.Translation[2] * 1e-3; // Convert mm to m
       msg.pose.orientation.x = rot.Rotation[0];
       msg.pose.orientation.y = rot.Rotation[1];
       msg.pose.orientation.z = rot.Rotation[2];
