@@ -24,6 +24,13 @@ struct ViconNode : public rclcpp::Node {
     get_parameter("hostname", hostname);
     get_parameter("buffer_size", buffer_size);
     get_parameter("namespace", ns_name);
+
+    std::signal(SIGINT, &ViconNode::signal_handler);
+  }
+
+  static void signal_handler(int signum) {
+    RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Received signal %d", signum);
+    rclcpp::shutdown();
   }
 
   bool connect() {
