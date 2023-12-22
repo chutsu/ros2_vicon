@@ -11,6 +11,8 @@ FIND_PACKAGE(rclcpp REQUIRED)
 FIND_PACKAGE(rclcpp_components REQUIRED)
 FIND_PACKAGE(std_msgs REQUIRED)
 FIND_PACKAGE(geometry_msgs REQUIRED)
+FIND_PACKAGE(tf2 REQUIRED)
+FIND_PACKAGE(tf2_ros REQUIRED)
 
 # VICON SDK
 INCLUDE_DIRECTORIES(vicon_datastream_sdk/Release/Linux64)
@@ -107,6 +109,8 @@ AMENT_EXPORT_DEPENDENCIES(
   rclcpp_components
   std_msgs
   geometry_msgs
+  tf2
+  tf2_ros
 )
 
 # VICON NODE
@@ -116,6 +120,8 @@ AMENT_TARGET_DEPENDENCIES(
   rclcpp
   std_msgs
   geometry_msgs
+  tf2
+  tf2_ros
 )
 TARGET_LINK_LIBRARIES(vicon_node ViconDataStreamSDK_CPP)
 INSTALL(TARGETS vicon_node DESTINATION lib/${PROJECT_NAME})

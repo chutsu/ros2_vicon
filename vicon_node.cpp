@@ -2,12 +2,15 @@
 #include <string>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include "DataStreamClient.h"
 
 namespace vicon = ViconDataStreamSDK::CPP;
 using PoseStamped = geometry_msgs::msg::PoseStamped;
+using TF2Stamped = geometry_msgs::msg::TransformStamped;
 
 struct ViconNode : public rclcpp::Node {
   vicon::Client client;
@@ -15,7 +18,8 @@ struct ViconNode : public rclcpp::Node {
   std::string hostname;
   size_t buffer_size;
   std::string ns_name;
-  std::map<std::string, rclcpp::Publisher<PoseStamped>::SharedPtr> pub_map;
+  std::map<std::string, rclcpp::Publisher<PoseStamped>::SharedPtr> pub_pose_map;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
 
   ViconNode() : Node{"vicon_node"} {
     declare_parameter<std::string>("hostname", "127.0.0.1");
@@ -26,6 +30,7 @@ struct ViconNode : public rclcpp::Node {
     get_parameter("namespace", ns_name);
 
     std::signal(SIGINT, &ViconNode::signal_handler);
+    tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
   }
 
   static void signal_handler(int signum) {
@@ -110,29 +115,51 @@ struct ViconNode : public rclcpp::Node {
 
   void publish(const std::string &sub_name, const std::string &seg_name) {
     const std::string topic_name = sub_name + "/" + seg_name;
-    if (pub_map.count(topic_name)) {
+    if (pub_pose_map.count(topic_name)) {
       // clang-format off
       const auto trans = client.GetSegmentGlobalTranslation(sub_name, seg_name);
+      const auto pos_x = trans.Translation[0] * 1e-3;  // Convert mm to m
+      const auto pos_y = trans.Translation[1] * 1e-3;  // Convert mm to m
+      const auto pos_z = trans.Translation[2] * 1e-3;  // Convert mm to m
       const auto rot = client.GetSegmentGlobalRotationQuaternion(sub_name, seg_name);
+      const auto qx = rot.Rotation[0];
+      const auto qy = rot.Rotation[1];
+      const auto qz = rot.Rotation[2];
+      const auto qw = rot.Rotation[3];
       // clang-format on
 
+      // Publish pose stamped message
       PoseStamped msg;
       msg.header.frame_id = sub_name + "/" + seg_name;
       msg.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
-      msg.pose.position.x = trans.Translation[0] * 1e-3; // Convert mm to m
-      msg.pose.position.y = trans.Translation[1] * 1e-3; // Convert mm to m
-      msg.pose.position.z = trans.Translation[2] * 1e-3; // Convert mm to m
-      msg.pose.orientation.x = rot.Rotation[0];
-      msg.pose.orientation.y = rot.Rotation[1];
-      msg.pose.orientation.z = rot.Rotation[2];
-      msg.pose.orientation.w = rot.Rotation[3];
-      pub_map[topic_name]->publish(msg);
+      msg.pose.position.x = pos_x;
+      msg.pose.position.y = pos_y;
+      msg.pose.position.z = pos_z;
+      msg.pose.orientation.x = qx;
+      msg.pose.orientation.y = qy;
+      msg.pose.orientation.z = qz;
+      msg.pose.orientation.w = qw;
+      pub_pose_map[topic_name]->publish(msg);
 
-    } else if (pub_map.count(topic_name) == 0) {
+      // Publish pose stamped message
+      TF2Stamped tf2_msg;
+      tf2_msg.header.frame_id = "map";
+      tf2_msg.child_frame_id = sub_name + "/" + seg_name;
+      tf2_msg.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+      tf2_msg.transform.translation.x = pos_x;
+      tf2_msg.transform.translation.y = pos_y;
+      tf2_msg.transform.translation.z = pos_z;
+      tf2_msg.transform.rotation.x = qx;
+      tf2_msg.transform.rotation.y = qy;
+      tf2_msg.transform.rotation.z = qz;
+      tf2_msg.transform.rotation.w = qw;
+      tf_broadcaster->sendTransform(tf2_msg);
+
+    } else if (pub_pose_map.count(topic_name) == 0) {
       const std::string topic_name = ns_name + "/" + sub_name + "/" + seg_name;
       const std::string key = sub_name + "/" + seg_name;
       printf("Creating publisher [%s]\n", key.c_str());
-      pub_map[key] = create_publisher<PoseStamped>(topic_name, 1);
+      pub_pose_map[key] = create_publisher<PoseStamped>(topic_name, 1);
     }
   }
 };
