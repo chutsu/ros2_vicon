@@ -33,31 +33,31 @@ struct ViconNode : public rclcpp::Node {
     tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
   }
 
-  static void signal_handler(int signum) {
-    RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Received signal %d", signum);
-    rclcpp::shutdown();
-  }
+  static void signal_handler(int signum) { rclcpp::shutdown(); }
 
   bool connect() {
     // Connect to server
-    printf("Connecting to [%s] ...\n", hostname.c_str());
+    RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Connecting to [%s] ...",
+                hostname.c_str());
     const int num_retries = 5;
     for (int i = 0; i < num_retries; i++) {
       if (client.IsConnected().Connected) {
         break;
       }
       if (client.Connect(hostname).Result != vicon::Result::Success) {
-        printf("Failed to connect, retrying ...\n");
+        RCLCPP_WARN(rclcpp::get_logger("vicon_node"),
+                    "Failed to connect, retrying ...");
         sleep(1);
       }
     }
 
     // Check connection
     if (client.Connect(hostname).Result != vicon::Result::Success) {
-      printf("Failed to connect to vicon\n");
+      RCLCPP_FATAL(rclcpp::get_logger("vicon_node"),
+                   "Failed to connect to vicon");
       return false;
     } else {
-      printf("Connected!\n");
+      RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Connected!");
     }
 
     // Perform further initialization
@@ -85,15 +85,17 @@ struct ViconNode : public rclcpp::Node {
     client.DisableDeviceData();
     client.DisableCentroidData();
 
-    printf("Disconnecting from [%s] ...\n", hostname.c_str());
+    RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Disconnecting from [%s] ...",
+                hostname.c_str());
     client.Disconnect();
 
     if (!client.IsConnected().Connected) {
-      printf("Successfully disconnected!\n");
+      RCLCPP_INFO(rclcpp::get_logger("vicon_node"),
+                  "Successfully disconnected!");
       return true;
     }
 
-    printf("Failed to disconnect!\n");
+    RCLCPP_FATAL(rclcpp::get_logger("vicon_node"), "Failed to disconnect!");
     return false;
   }
 
@@ -158,7 +160,8 @@ struct ViconNode : public rclcpp::Node {
     } else if (pub_pose_map.count(topic_name) == 0) {
       const std::string topic_name = ns_name + "/" + sub_name + "/" + seg_name;
       const std::string key = sub_name + "/" + seg_name;
-      printf("Creating publisher [%s]\n", key.c_str());
+      RCLCPP_INFO(rclcpp::get_logger("vicon_node"), "Creating publisher [%s]",
+                  key.c_str());
       pub_pose_map[key] = create_publisher<PoseStamped>(topic_name, 1);
     }
   }
